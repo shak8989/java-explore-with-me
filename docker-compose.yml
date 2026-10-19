@@ -25,7 +25,10 @@ services:
       - stats-data:/var/lib/postgresql/data
 
 
+
   ewm-service:
+    profiles:
+      - main
     build:
       context: .
       dockerfile: ewm-main-service/Dockerfile
@@ -35,7 +38,10 @@ services:
 
 
 
+
   ewm-db:
+    profiles:
+      - main
     image: postgres:16.1
     environment:
       POSTGRES_DB: ewm
