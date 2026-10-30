@@ -205,7 +205,7 @@ public class EventService {
                         LocalDateTime.now().plusHours(1))) {
 
             throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
+                    HttpStatus.BAD_REQUEST,
                     "Event must start in more than 1 hour");
         }
 
