@@ -64,7 +64,8 @@
 						</execution>
 					</executions>
 					<dependencies>
-						<dependency>
+
+                        <dependency>
 							<groupId>com.puppycrawl.tools</groupId>
 							<artifactId>checkstyle</artifactId>
 							<version>10.3</version>
