@@ -47,7 +47,7 @@ public class PrivateEventController {
     public EventFullDto updateUserEvent(
             @PathVariable Long userId,
             @PathVariable Long eventId,
-            @RequestBody UpdateEventUserRequest request) {
+            @Valid @RequestBody UpdateEventUserRequest request) {
 
         return eventService.updateUserEvent(userId, eventId, request);
     }

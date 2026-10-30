@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.RestController;
 import java.time.LocalDateTime;
 import org.springframework.format.annotation.DateTimeFormat;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/events")
@@ -74,6 +76,14 @@ public class PublicEventController {
             @RequestParam(defaultValue = "0") int from,
             @RequestParam(defaultValue = "10") int size,
             HttpServletRequest request)  {
+
+        if (rangeStart != null && rangeEnd != null
+                && rangeStart.isAfter(rangeEnd)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "rangeStart must not be after rangeEnd"
+            );
+        }
 
         eventService.registerEventSearch(request.getRemoteAddr());
 

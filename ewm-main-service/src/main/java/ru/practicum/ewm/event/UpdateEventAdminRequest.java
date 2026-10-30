@@ -1,18 +1,34 @@
 
 package ru.practicum.ewm.event;
 
+import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.PositiveOrZero;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import java.time.LocalDateTime;
 
 public class UpdateEventAdminRequest {
 
+
+    @Size(min = 3, max = 120)
     private String title;
+
+    @Size(min = 20, max = 2000)
     private String annotation;
+
+    @Size(min = 20, max = 7000)
     private String description;
+
     private Long category;
+
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime eventDate;
+
     private Location location;
     private Boolean paid;
+
+    @PositiveOrZero
     private Integer participantLimit;
+
     private Boolean requestModeration;
     private AdminStateAction stateAction;
 

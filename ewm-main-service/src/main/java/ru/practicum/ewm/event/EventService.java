@@ -134,7 +134,7 @@ public class EventService {
         if (request.getEventDate() != null) {
             if (!request.getEventDate().isAfter(LocalDateTime.now().plusHours(2))) {
                 throw new ResponseStatusException(
-                        HttpStatus.CONFLICT, "Event must start in more than 2 hours");
+                        HttpStatus.BAD_REQUEST, "Event must start in more than 2 hours");
             }
             event.setEventDate(request.getEventDate());
         }
