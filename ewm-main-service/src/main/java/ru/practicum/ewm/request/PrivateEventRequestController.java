@@ -23,6 +23,7 @@ public class PrivateEventRequestController {
 
         return requestService.getEventRequests(userId, eventId);
     }
+
     @PatchMapping
     public EventRequestStatusUpdateResult updateRequestStatuses(
             @PathVariable Long userId,
