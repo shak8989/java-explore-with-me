@@ -1,6 +1,8 @@
 
 package ru.practicum.ewm.event;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
@@ -13,7 +15,10 @@ public interface EventRepository extends
         JpaSpecificationExecutor<Event> {
 
 
-    List<Event> findByInitiator_IdOrderByIdAsc(Long userId);
+
+    Page<Event> findByInitiator_IdOrderByIdAsc(
+            Long userId, Pageable pageable);
+
 
     List<Event> findByStateAndCategory_IdInOrderByIdAsc(
             EventState state,
@@ -24,6 +29,9 @@ public interface EventRepository extends
 
     List<Event> findByStateOrderByIdAsc(EventState state);
 
+    Page<Event> findByStateOrderByIdAsc(
+            EventState state, Pageable pageable);
+
     @Query("""
         SELECT e FROM Event e
         WHERE e.state = :state
@@ -33,9 +41,14 @@ public interface EventRepository extends
         )
         ORDER BY e.id ASC
         """)
-    List<Event> searchByText(
+
+    Page<Event> searchByText(
             @Param("state") EventState state,
-            @Param("text") String text);
+            @Param("text") String text,
+            Pageable pageable);
+
+
+    boolean existsByCategory_Id(Long categoryId);
 
 
 }

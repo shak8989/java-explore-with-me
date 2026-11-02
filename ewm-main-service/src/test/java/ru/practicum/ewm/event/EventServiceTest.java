@@ -1,10 +1,16 @@
 
 package ru.practicum.ewm.event;
 
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
-
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.any;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -22,6 +28,7 @@ import ru.practicum.ewm.user.UserRepository;
 import ru.practicum.stats.client.StatsClient;
 import ru.practicum.stats.dto.EndpointHitDto;
 import ru.practicum.stats.dto.ViewStatsDto;
+
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -462,6 +469,8 @@ class EventServiceTest {
         verify(eventRepository).findById(7L);
     }
 
+
+
     @Test
     void shouldSearchPublishedEventsByText() {
 
@@ -473,8 +482,10 @@ class EventServiceTest {
         event.setInitiator(new User());
 
         when(eventRepository.searchByText(
-                EventState.PUBLISHED, "Java"))
-                .thenReturn(List.of(event));
+                eq(EventState.PUBLISHED),
+                eq("Java"),
+                any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(event)));
 
         var result = eventService.getPublishedEventsShort(
                 "  Java  ", 0, 10
@@ -485,18 +496,20 @@ class EventServiceTest {
         assertEquals("Java Conference", result.get(0).getTitle());
 
         verify(eventRepository).searchByText(
-                EventState.PUBLISHED, "Java"
+                eq(EventState.PUBLISHED),
+                eq("Java"),
+                any(Pageable.class)
         );
     }
+
+
+
 
     @Test
     void shouldFilterPublishedEventsByCategory() {
 
-        Category musicCategory = mock(Category.class);
-        when(musicCategory.getId()).thenReturn(1L);
-
-        Category sportCategory = mock(Category.class);
-        when(sportCategory.getId()).thenReturn(2L);
+        Category musicCategory = new Category();
+        musicCategory.setId(1L);
 
         Event musicEvent = new Event();
         musicEvent.setId(10L);
@@ -505,16 +518,10 @@ class EventServiceTest {
         musicEvent.setCategory(musicCategory);
         musicEvent.setInitiator(new User());
 
-        Event sportEvent = new Event();
-        sportEvent.setId(11L);
-        sportEvent.setTitle("Football Match");
-        sportEvent.setState(EventState.PUBLISHED);
-        sportEvent.setCategory(sportCategory);
-        sportEvent.setInitiator(new User());
-
-        when(eventRepository.findByStateAndCategory_IdOrderByIdAsc(
-                EventState.PUBLISHED, 1L
-        )).thenReturn(List.of(musicEvent, sportEvent));
+        when(eventRepository.findAll(
+                any(Specification.class),
+                any(Pageable.class)
+        )).thenReturn(new PageImpl<>(List.of(musicEvent)));
 
         var result = eventService.getPublishedEventsShort(
                 null, 1L, 0, 10
@@ -524,11 +531,12 @@ class EventServiceTest {
         assertEquals(10L, result.get(0).getId());
         assertEquals("Music Night", result.get(0).getTitle());
 
-        verify(eventRepository)
-                .findByStateAndCategory_IdOrderByIdAsc(
-                        EventState.PUBLISHED, 1L
-                );
+        verify(eventRepository).findAll(
+                any(Specification.class),
+                any(Pageable.class)
+        );
     }
+
 
     @Test
     void shouldFilterPaidEvents() {
@@ -552,9 +560,12 @@ class EventServiceTest {
         freeEvent.setCategory(category);
         freeEvent.setInitiator(initiator);
 
-        when(eventRepository.findByStateOrderByIdAsc(
-                EventState.PUBLISHED
-        )).thenReturn(List.of(paidEvent, freeEvent));
+
+        when(eventRepository.findAll(
+                any(Specification.class),
+                any(Pageable.class)
+        )).thenReturn(new PageImpl<>(List.of(paidEvent)));
+
 
         when(statsClient.getStats(
                 any(LocalDateTime.class),
@@ -597,9 +608,12 @@ class EventServiceTest {
         availableEvent.setParticipantLimit(10);
         availableEvent.setConfirmedRequests(3);
 
-        when(eventRepository.findByStateOrderByIdAsc(
-                EventState.PUBLISHED
-        )).thenReturn(List.of(fullEvent, availableEvent));
+
+        when(eventRepository.findAll(
+                any(Specification.class),
+                any(Pageable.class)
+        )).thenReturn(new PageImpl<>(List.of(availableEvent)));
+
 
         when(statsClient.getStats(
                 any(LocalDateTime.class),
@@ -618,6 +632,7 @@ class EventServiceTest {
         assertEquals("Available Workshop", result.get(0).getTitle());
     }
 
+
     @Test
     void shouldReturnCorrectPageOfEvents() {
 
@@ -626,30 +641,31 @@ class EventServiceTest {
 
         User initiator = new User();
 
-        Event first = new Event();
-        first.setId(1L);
-        first.setCategory(category);
-        first.setInitiator(initiator);
-
         Event second = new Event();
         second.setId(2L);
         second.setCategory(category);
         second.setInitiator(initiator);
 
-        Event third = new Event();
-        third.setId(3L);
-        third.setCategory(category);
-        third.setInitiator(initiator);
-
         when(eventRepository.findByStateOrderByIdAsc(
-                EventState.PUBLISHED
-        )).thenReturn(List.of(first, second, third));
+                eq(EventState.PUBLISHED),
+                any(Pageable.class)
+        )).thenReturn(new PageImpl<>(List.of(second)));
 
         var result = eventService.getPublishedEventsShort(1, 1);
 
         assertEquals(1, result.size());
         assertEquals(2L, result.get(0).getId());
+
+        verify(eventRepository).findByStateOrderByIdAsc(
+                eq(EventState.PUBLISHED),
+                argThat((Pageable pageable) ->
+                        pageable.getPageNumber() == 1
+                                && pageable.getPageSize() == 1
+                )
+        );
     }
+
+
 
     @Test
     void shouldSortPublishedEventsByEventDate() {
@@ -677,9 +693,12 @@ class EventServiceTest {
         earlierEvent.setCategory(category);
         earlierEvent.setInitiator(initiator);
 
-        when(eventRepository.findByStateOrderByIdAsc(
-                EventState.PUBLISHED
-        )).thenReturn(List.of(laterEvent, earlierEvent));
+        when(eventRepository.findAll(
+                any(Specification.class),
+                any(Pageable.class)
+        )).thenReturn(new PageImpl<>(
+                List.of(earlierEvent, laterEvent)
+        ));
 
         when(statsClient.getStats(
                 any(LocalDateTime.class),
@@ -696,7 +715,15 @@ class EventServiceTest {
         assertEquals(2, result.size());
         assertEquals(41L, result.get(0).getId());
         assertEquals(40L, result.get(1).getId());
+
+        verify(eventRepository).findAll(
+                any(Specification.class),
+                argThat((Pageable pageable) ->
+                        pageable.getSort().getOrderFor("eventDate") != null
+                )
+        );
     }
+
 
     @Test
     void shouldSortPublishedEventsByViews() {
@@ -718,9 +745,12 @@ class EventServiceTest {
         morePopular.setCategory(category);
         morePopular.setInitiator(initiator);
 
-        when(eventRepository.findByStateOrderByIdAsc(
-                EventState.PUBLISHED
+
+        when(eventRepository.findAll(
+                any(Specification.class),
+                any(Sort.class)
         )).thenReturn(List.of(lessPopular, morePopular));
+
 
         when(statsClient.getStats(
                 any(LocalDateTime.class),

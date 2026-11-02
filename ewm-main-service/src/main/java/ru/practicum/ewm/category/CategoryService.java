@@ -4,16 +4,28 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.stereotype.Service;
 import java.util.List;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.transaction.annotation.Transactional;
+import ru.practicum.ewm.event.EventRepository;
 
 @Service
+@Transactional(readOnly = true)
 public class CategoryService {
 
-    private final CategoryRepository categoryRepository;
 
-    public CategoryService(CategoryRepository categoryRepository) {
+    private final CategoryRepository categoryRepository;
+    private final EventRepository eventRepository;
+
+    public CategoryService(
+            CategoryRepository categoryRepository,
+            EventRepository eventRepository) {
         this.categoryRepository = categoryRepository;
+        this.eventRepository = eventRepository;
     }
 
+
+    @Transactional
     public CategoryDto createCategory(NewCategoryDto request) {
         Category category = CategoryMapper.toCategory(request);
 
@@ -22,14 +34,17 @@ public class CategoryService {
         return CategoryMapper.toCategoryDto(savedCategory);
     }
 
+
     public List<CategoryDto> getCategories(int from, int size) {
-        return categoryRepository.findAll()
+        Pageable pageable = PageRequest.of(from / size, size);
+
+        return categoryRepository.findAll(pageable)
+                .getContent()
                 .stream()
-                .skip(from)
-                .limit(size)
                 .map(CategoryMapper::toCategoryDto)
                 .toList();
     }
+
 
 
     public CategoryDto getCategoryById(Long catId) {
@@ -43,6 +58,7 @@ public class CategoryService {
     }
 
 
+    @Transactional
     public CategoryDto updateCategory(Long catId, NewCategoryDto request) {
         Category category = categoryRepository.findById(catId)
                 .orElseThrow(() -> new ResponseStatusException(
@@ -58,6 +74,8 @@ public class CategoryService {
     }
 
 
+
+    @Transactional
     public void deleteCategory(Long catId) {
         Category category = categoryRepository.findById(catId)
                 .orElseThrow(() -> new ResponseStatusException(
@@ -65,8 +83,16 @@ public class CategoryService {
                         "Category not found: " + catId
                 ));
 
+        if (eventRepository.existsByCategory_Id(catId)) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Cannot delete category with existing events"
+            );
+        }
+
         categoryRepository.delete(category);
     }
+
 
 
 

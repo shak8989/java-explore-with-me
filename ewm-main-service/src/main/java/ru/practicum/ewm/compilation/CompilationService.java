@@ -11,7 +11,10 @@ import ru.practicum.ewm.event.EventRepository;
 
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 public class CompilationService {
@@ -36,25 +39,9 @@ public class CompilationService {
         compilation.setTitle(request.getTitle());
         compilation.setPinned(request.isPinned());
 
-        Set<Event> events = new LinkedHashSet<>();
-
-        if (request.getEvents() != null) {
-            for (Long eventId : request.getEvents()) {
-
-                if (eventId == null) {
-                    throw new ResponseStatusException(
-                            HttpStatus.BAD_REQUEST,
-                            "Event ID cannot be null");
-                }
-
-                Event event = eventRepository.findById(eventId)
-                        .orElseThrow(() -> new ResponseStatusException(
-                                HttpStatus.NOT_FOUND,
-                                "Event not found: " + eventId));
-
-                events.add(event);
-            }
-        }
+        Set<Event> events = request.getEvents() == null
+                ? new LinkedHashSet<>()
+                : loadEvents(request.getEvents());
 
         compilation.setEvents(events);
 
@@ -134,24 +121,7 @@ public class CompilationService {
         // Изменяем список мероприятий
         if (request.getEvents() != null) {
 
-            Set<Event> events = new LinkedHashSet<>();
-
-            for (Long eventId : request.getEvents()) {
-
-                if (eventId == null) {
-                    throw new ResponseStatusException(
-                            HttpStatus.BAD_REQUEST,
-                            "Event ID cannot be null");
-                }
-
-                Event event = eventRepository
-                        .findById(eventId)
-                        .orElseThrow(() -> new ResponseStatusException(
-                                HttpStatus.NOT_FOUND,
-                                "Event not found: " + eventId));
-
-                events.add(event);
-            }
+            Set<Event> events = loadEvents(request.getEvents());
 
             compilation.setEvents(events);
         }
@@ -159,6 +129,42 @@ public class CompilationService {
         Compilation saved = compilationRepository.save(compilation);
 
         return CompilationMapper.toDto(saved);
+    }
+
+    // Загружаем все события одним вызовом репозитория и сохраняем порядок ID.
+    private Set<Event> loadEvents(java.util.Collection<Long> requestedIds) {
+        Set<Long> eventIds = new LinkedHashSet<>(requestedIds);
+        if (eventIds.contains(null)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Event ID cannot be null");
+        }
+
+        if (eventIds.isEmpty()) {
+            return new LinkedHashSet<>();
+        }
+
+        List<Event> foundEvents = eventRepository.findAllById(eventIds);
+        if (foundEvents.size() != eventIds.size()) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "One or more events not found");
+        }
+
+        Map<Long, Event> eventsById = foundEvents.stream()
+                .collect(Collectors.toMap(Event::getId, Function.identity()));
+
+        Set<Event> orderedEvents = new LinkedHashSet<>();
+        for (Long eventId : eventIds) {
+            Event event = eventsById.get(eventId);
+            if (event == null) {
+                throw new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Event not found: " + eventId);
+            }
+            orderedEvents.add(event);
+        }
+        return orderedEvents;
     }
 
     // 6. Постраничная выдача через PostgreSQL
