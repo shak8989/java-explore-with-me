@@ -13,3 +13,13 @@ Template repository for ExploreWithMe project.
 
 
 Разработка будет вестись в отдельной Git-ветке.
+
+## Дополнительная функциональность — комментарии
+
+Реализована возможность создавать, просматривать, редактировать
+и удалять комментарии к мероприятиям.
+
+Postman-тесты: `postman/feature.json`.
+
+Pull Request для проверки диплома:
+https://github.com/shak8989/java-explore-with-me/pull/4
